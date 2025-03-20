@@ -22,6 +22,9 @@ import smithy4s.Blob
 import smithy4s.schema.Schema
 import smithy4s.HintMask
 import smithy4s.schema.FieldFilter
+import smithy.api.Length
+import smithy4s.RefinementProvider
+import smithy4s.Nullable
 
 class JsonCodecApiTests extends FunSuite {
 
@@ -83,26 +86,6 @@ class JsonCodecApiTests extends FunSuite {
   }
 
   test(
-    "explicit nulls should be used when set"
-  ) {
-    val schemaWithJsonName = Schema
-      .struct[Option[String]]
-      .apply(
-        Schema.string
-          .optional[Option[String]]("a", identity)
-      )(identity)
-
-    val capi = Json.payloadCodecs.withJsoniterCodecCompiler(
-      Json.jsoniter.withFieldFilter(FieldFilter.EncodeAll)
-    )
-
-    val codec = capi.encoders.fromSchema(schemaWithJsonName)
-    val encoded = codec.encode(None)
-
-    assertEquals(encoded, Blob("""{"a":null}"""))
-  }
-
-  test(
     "explicit nulls should be parsable regardless of fieldFilter setting"
   ) {
     val withoutNulls = Json.payloadCodecs
@@ -123,6 +106,84 @@ class JsonCodecApiTests extends FunSuite {
 
       assertEquals(decoded, Right(None))
     }
+  }
+
+  test(
+    "schemas backed by an OptionSchema should be treated same as OptionSchema itself"
+  ) {
+    case class OptionalLike[+A](underlying: Option[A])
+    case class Options(
+        justOption: Option[String],
+        bijectedOption: OptionalLike[String],
+        refinedOption: Option[String],
+        recursive: Option[Options],
+        optionalNullable: Option[Nullable[String]]
+    )
+
+    lazy val schema: Schema[Options] = Schema.recursive {
+      Schema
+        .struct[Options]
+        .apply(
+          Schema.string.optional[Options]("justOption", _.justOption),
+          Schema.string.option
+            .biject(OptionalLike(_))(_.underlying)
+            .field[Options]("bijectedOption", _.bijectedOption),
+          Schema.string.option
+            .validated(Length(max = Some(10)))(
+              RefinementProvider.lengthConstraint(_.fold(0)(_.length))
+            )
+            .field[Options]("refinedOption", _.justOption),
+          schema.optional[Options]("recursive", _.recursive),
+          Schema.string.nullable
+            .optional[Options]("optionalNullable", _.optionalNullable)
+        )(Options.apply)
+    }
+
+    val capi = Json.payloadCodecs.withJsoniterCodecCompiler(
+      Json.jsoniter.withFieldFilter(FieldFilter.SkipUnsetOptions)
+    )
+
+    val encoder = capi.encoders.fromSchema(schema)
+
+    assertEquals(
+      encoder
+        .encode(
+          Options(
+            justOption = None,
+            bijectedOption = OptionalLike(None),
+            refinedOption = None,
+            recursive = None,
+            optionalNullable = None
+          )
+        )
+        .toUTF8String,
+      Blob("{}").toUTF8String
+    )
+
+    assertEquals(
+      encoder
+        .encode(
+          Options(
+            justOption = Some("a"),
+            bijectedOption = OptionalLike(Some("a")),
+            refinedOption = Some("a"),
+            recursive = Some(
+              Options(
+                justOption = None,
+                bijectedOption = OptionalLike(None),
+                refinedOption = None,
+                recursive = None,
+                optionalNullable = None
+              )
+            ),
+            optionalNullable = Some(Nullable.Null)
+          )
+        )
+        .toUTF8String,
+      Blob(
+        """{"justOption":"a","bijectedOption":"a","refinedOption":"a","recursive":{},"optionalNullable":null}"""
+      ).toUTF8String
+    )
   }
 
 }

@@ -16,6 +16,13 @@
 
 package smithy4s.schema
 
+import smithy4s.~>
+import alloy.Nullable
+import smithy4s.schema.Schema.OptionSchema
+import smithy4s.schema.Schema.BijectionSchema
+import smithy4s.schema.Schema.RefinementSchema
+import smithy4s.schema.Schema.LazySchema
+
 trait FieldFilter { self =>
   def compile[S, A](
       field: Field[S, A]
@@ -158,10 +165,36 @@ object FieldFilter {
 
   val SkipNonRequiredDefaultValues: FieldFilter = skipNonRequiredDefaultValues
 
-  private case object skipUnsetOptions extends FieldFilter.SkipNonRequired {
-    def compileNonRequired[S, A](field: Field[S, A]): Predicate[A] = { a =>
-      a != None
+  private object IsNoneVisitor extends (Schema ~> Predicate) {
+
+    def apply[A](schema: Schema[A]): Predicate[A] = schema match {
+      // nullables are technically never None, so we fall through
+      case OptionSchema(underlying) =>
+        if (underlying.hints.has(Nullable) && !underlying.isOption)
+          Function.const(false)
+        else
+          _ == None
+
+      case BijectionSchema(underlying, bijection) =>
+        this(underlying).compose(bijection.from)
+
+      case RefinementSchema(underlying, refinement) =>
+        this(underlying).compose(refinement.from)
+
+      // technically, realistically this case is probably not reachable
+      // because a recursive schema be wrapped in an option first, and wouldn't be traversed by this visitor.
+      // could possibly be reached from a recursive list/map
+      case LazySchema(suspend) =>
+        val underlying = suspend.map(this(_))
+        v => underlying.value(v)
+
+      case _ => Function.const(false)
     }
+  }
+
+  private case object skipUnsetOptions extends FieldFilter.SkipNonRequired {
+    def compileNonRequired[S, A](field: Field[S, A]): Predicate[A] =
+      IsNoneVisitor(field.schema).andThen(!_)
   }
 
   val SkipUnsetOptions: FieldFilter = skipUnsetOptions
