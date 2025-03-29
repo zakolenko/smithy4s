@@ -38,11 +38,13 @@ object UnaryServerEndpoint {
     }
 
     val base = { (req: Request) =>
-      F.flatMap(codecs.inputDecoder(req)) { input =>
-        F.flatMap(interpreter(endpoint.wrap(input))) {
-          codecs.outputEncoder
+      F.handleErrorWith(
+        F.flatMap(codecs.inputDecoder(req)) { input =>
+          F.flatMap(interpreter(endpoint.wrap(input))) {
+            codecs.outputEncoder
+          }
         }
-      }
+      )(errorResponse)
     }
     val withMiddleware = middleware(base)
     withMiddleware.andThen { F.handleErrorWith(_)(errorResponse) }
