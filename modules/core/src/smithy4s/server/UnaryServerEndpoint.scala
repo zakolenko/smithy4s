@@ -28,7 +28,8 @@ object UnaryServerEndpoint {
       interpreter: FunctorInterpreter[Op, F],
       endpoint: Endpoint[Op, I, E, O, SI, SO],
       codecs: UnaryServerCodecs[F, Request, Response, I, E, O],
-      middleware: (Request => F[Response]) => (Request => F[Response])
+      middleware: (Request => F[Response]) => (Request => F[Response]),
+      encodeErrorsBeforeMiddleware: Boolean = false
   )(implicit F: MonadThrowLike[F]): Request => F[Response] = {
     def errorResponse(throwable: Throwable): F[Response] = throwable match {
       case endpoint.Error((_, e)) =>
@@ -38,15 +39,20 @@ object UnaryServerEndpoint {
     }
 
     val base = { (req: Request) =>
-      F.handleErrorWith(
-        F.flatMap(codecs.inputDecoder(req)) { input =>
-          F.flatMap(interpreter(endpoint.wrap(input))) {
-            codecs.outputEncoder
-          }
+      F.flatMap(codecs.inputDecoder(req)) { input =>
+        F.flatMap(interpreter(endpoint.wrap(input))) {
+          codecs.outputEncoder
         }
-      )(errorResponse)
+      }
     }
-    val withMiddleware = middleware(base)
+
+    val withErrorsEncoded =
+      if (encodeErrorsBeforeMiddleware)
+        base.andThen { F.handleErrorWith(_)(errorResponse) }
+      else
+        base
+
+    val withMiddleware = middleware(withErrorsEncoded)
     withMiddleware.andThen { F.handleErrorWith(_)(errorResponse) }
 
   }

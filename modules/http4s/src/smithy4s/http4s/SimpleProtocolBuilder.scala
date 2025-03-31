@@ -131,7 +131,8 @@ abstract class SimpleProtocolBuilder[P](
       service: smithy4s.Service[Alg],
       impl: FunctorAlgebra[Alg, F],
       errorTransformation: PartialFunction[Throwable, F[Throwable]],
-      middleware: ServerEndpointMiddleware[F]
+      middleware: ServerEndpointMiddleware[F],
+      encodeErrorsBeforeMiddleware: Boolean = false
   )(implicit
       F: Concurrent[F]
   ) {
@@ -156,7 +157,7 @@ abstract class SimpleProtocolBuilder[P](
     def mapErrors(
         fe: PartialFunction[Throwable, Throwable]
     ): RouterBuilder[Alg, F] =
-      new RouterBuilder(service, impl, fe andThen (e => F.pure(e)), middleware)
+      new RouterBuilder(service, impl, fe andThen (e => F.pure(e)), middleware, encodeErrorsBeforeMiddleware)
 
     /**
       * Applies the error transformation to the errors that are not in the smithy spec (has no effect on errors from spec).
@@ -178,12 +179,18 @@ abstract class SimpleProtocolBuilder[P](
     def flatMapErrors(
         fe: PartialFunction[Throwable, F[Throwable]]
     ): RouterBuilder[Alg, F] =
-      new RouterBuilder(service, impl, fe, middleware)
+      new RouterBuilder(service, impl, fe, middleware, encodeErrorsBeforeMiddleware)
 
     def middleware(
         mid: ServerEndpointMiddleware[F]
     ): RouterBuilder[Alg, F] =
-      new RouterBuilder[Alg, F](service, impl, errorTransformation, mid)
+      middleware(mid, encodeErrorsBeforeMiddleware = false)
+
+    def middleware(
+        mid: ServerEndpointMiddleware[F],
+        encodeErrorsBeforeMiddleware: Boolean
+    ): RouterBuilder[Alg, F] =
+      new RouterBuilder[Alg, F](service, impl, errorTransformation, mid, encodeErrorsBeforeMiddleware)
 
     def make: Either[UnsupportedProtocolError, HttpRoutes[F]] =
       checkProtocol(service, protocolTag)
@@ -203,7 +210,8 @@ abstract class SimpleProtocolBuilder[P](
             getUri =
               (request: Request[F]) => toSmithy4sHttpUri(request.uri, None),
             addDecodedPathParams = (request: Request[F], pathParams) =>
-              request.withAttribute(pathParamsKey, pathParams)
+              request.withAttribute(pathParamsKey, pathParams),
+            encodeErrorsBeforeMiddleware = encodeErrorsBeforeMiddleware
           )
           HttpRoutes(
             router.andThen(OptionT.fromOption(_).flatMap(OptionT.liftF(_)))

@@ -37,7 +37,8 @@ object HttpUnaryServerRouter {
       endpointMiddleware: Endpoint.Middleware[Request => F[Response]],
       getMethod: Request => HttpMethod,
       getUri: Request => HttpUri,
-      addDecodedPathParams: (Request, PathParams) => Request
+      addDecodedPathParams: (Request, PathParams) => Request,
+      encodeErrorsBeforeMiddleware: Boolean
   )(implicit F: MonadThrowLike[F]): Request => Option[F[Response]] = {
     new KleisliRouter[Alg, service.Operation, F, Request, Response](
       service,
@@ -46,7 +47,8 @@ object HttpUnaryServerRouter {
       endpointMiddleware,
       getMethod,
       getUri,
-      addDecodedPathParams
+      addDecodedPathParams,
+      encodeErrorsBeforeMiddleware
     )
   }
 
@@ -62,7 +64,8 @@ object HttpUnaryServerRouter {
       endpointMiddleware: Endpoint.Middleware[Request => F[Response]],
       getMethod: RequestHead => HttpMethod,
       getUri: RequestHead => HttpUri,
-      addDecodedPathParams: (Request, PathParams) => Request
+      addDecodedPathParams: (Request, PathParams) => Request,
+      encodeErrorsBeforeMiddleware: Boolean
   )(implicit F: MonadThrowLike[F]): PartialFunction[RequestHead, Request => F[Response]] = {
     new PartialFunctionRouter[Alg, service.Operation, F, RequestHead, Request, Response](
       service,
@@ -71,7 +74,8 @@ object HttpUnaryServerRouter {
       endpointMiddleware,
       getMethod,
       getUri,
-      addDecodedPathParams
+      addDecodedPathParams,
+      encodeErrorsBeforeMiddleware
     )
   }
 
@@ -82,7 +86,8 @@ object HttpUnaryServerRouter {
       endpointMiddleware: Endpoint.Middleware[Request => F[Response]],
       getMethod: Request => HttpMethod,
       getUri: Request => HttpUri,
-      addDecodedPathParams: (Request, PathParams) => Request
+      addDecodedPathParams: (Request, PathParams) => Request,
+      encodeErrorsBeforeMiddleware: Boolean
   )(implicit F: MonadThrowLike[F])
       extends (Request => Option[F[Response]]) {
 
@@ -121,7 +126,8 @@ object HttpUnaryServerRouter {
           impl,
           endpoint,
           makeServerCodecs(endpoint.schema),
-          endpointMiddleware.prepare(service)(endpoint)
+          endpointMiddleware.prepare(service)(endpoint),
+          encodeErrorsBeforeMiddleware
         )
         HttpEndpointHandler(httpEndpoint, handler)
       }
@@ -145,7 +151,8 @@ object HttpUnaryServerRouter {
       endpointMiddleware: Endpoint.Middleware[Request => F[Response]],
       getMethod: RequestHead => HttpMethod,
       getUri: RequestHead => HttpUri,
-      addDecodedPathParams: (Request, PathParams) => Request
+      addDecodedPathParams: (Request, PathParams) => Request,
+      encodeErrorsBeforeMiddleware: Boolean
   )(implicit F: MonadThrowLike[F])
       extends PartialFunction[RequestHead, Request => F[Response]] {
 
@@ -183,7 +190,8 @@ object HttpUnaryServerRouter {
           impl,
           endpoint,
           makeServerCodecs(endpoint.schema),
-          endpointMiddleware.prepare(service)(endpoint)
+          endpointMiddleware.prepare(service)(endpoint),
+          encodeErrorsBeforeMiddleware
         )
         HttpEndpointHandler(httpEndpoint, handler)
       }
