@@ -233,7 +233,7 @@ abstract class SimpleProtocolBuilder[P](
             ServerEndpointMiddleware.flatMapErrors(errorTransformation)
           val finalMiddleware =
             errorHandler.andThen(middleware).andThen(errorHandler)
-          val router = HttpUnaryServerRouter(service)(
+          val router = HttpUnaryServerRouter.v2(service)(
             impl,
             simpleProtocolCodecs.makeServerCodecs[F],
             finalMiddleware.biject(_.run)(HttpApp(_)),

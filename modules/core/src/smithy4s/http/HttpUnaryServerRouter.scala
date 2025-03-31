@@ -37,6 +37,28 @@ object HttpUnaryServerRouter {
       endpointMiddleware: Endpoint.Middleware[Request => F[Response]],
       getMethod: Request => HttpMethod,
       getUri: Request => HttpUri,
+      addDecodedPathParams: (Request, PathParams) => Request
+  )(implicit F: MonadThrowLike[F]): Request => Option[F[Response]] = {
+    new KleisliRouter[Alg, service.Operation, F, Request, Response](
+      service,
+      service.toPolyFunction[smithy4s.kinds.Kind1[F]#toKind5](impl),
+      makeServerCodecs,
+      endpointMiddleware,
+      getMethod,
+      getUri,
+      addDecodedPathParams,
+      encodeErrorsBeforeMiddleware = false
+    )
+  }
+
+  def v2[Alg[_[_, _, _, _, _]], F[_], Request, Response](
+      service: smithy4s.Service[Alg]
+  )(
+      impl: service.Impl[F],
+      makeServerCodecs: UnaryServerCodecs.Make[F, Request, Response],
+      endpointMiddleware: Endpoint.Middleware[Request => F[Response]],
+      getMethod: Request => HttpMethod,
+      getUri: Request => HttpUri,
       addDecodedPathParams: (Request, PathParams) => Request,
       encodeErrorsBeforeMiddleware: Boolean
   )(implicit F: MonadThrowLike[F]): Request => Option[F[Response]] = {
@@ -79,6 +101,28 @@ object HttpUnaryServerRouter {
     )
   }
 
+  def partialFunction[Alg[_[_, _, _, _, _]], F[_], RequestHead, Request, Response](
+      service: smithy4s.Service[Alg]
+  )(
+      impl: service.Impl[F],
+      makeServerCodecs: UnaryServerCodecs.Make[F, Request, Response],
+      endpointMiddleware: Endpoint.Middleware[Request => F[Response]],
+      getMethod: RequestHead => HttpMethod,
+      getUri: RequestHead => HttpUri,
+      addDecodedPathParams: (Request, PathParams) => Request
+  )(implicit F: MonadThrowLike[F]): PartialFunction[RequestHead, Request => F[Response]] = {
+    new PartialFunctionRouter[Alg, service.Operation, F, RequestHead, Request, Response](
+      service,
+      service.toPolyFunction[smithy4s.kinds.Kind1[F]#toKind5](impl),
+      makeServerCodecs,
+      endpointMiddleware,
+      getMethod,
+      getUri,
+      addDecodedPathParams,
+      encodeErrorsBeforeMiddleware = false
+    )
+  }
+
   private class KleisliRouter[Alg[_[_, _, _, _, _]], Op[_, _, _, _, _], F[_], Request, Response](
       service: smithy4s.Service.Aux[Alg, Op],
       impl: FunctorInterpreter[Op, F],
@@ -90,6 +134,27 @@ object HttpUnaryServerRouter {
       encodeErrorsBeforeMiddleware: Boolean
   )(implicit F: MonadThrowLike[F])
       extends (Request => Option[F[Response]]) {
+
+    def this(
+        service: smithy4s.Service.Aux[Alg, Op],
+        impl: FunctorInterpreter[Op, F],
+        makeServerCodecs: UnaryServerCodecs.Make[F, Request, Response],
+        endpointMiddleware: Endpoint.Middleware[Request => F[Response]],
+        getMethod: Request => HttpMethod,
+        getUri: Request => HttpUri,
+        addDecodedPathParams: (Request, PathParams) => Request
+    )(implicit F: MonadThrowLike[F]) = {
+      this(
+        service,
+        impl,
+        makeServerCodecs,
+        endpointMiddleware,
+        getMethod,
+        getUri,
+        addDecodedPathParams,
+        encodeErrorsBeforeMiddleware = false
+      )
+    }
 
     @nowarn
     private final case class HttpEndpointHandler(
@@ -155,6 +220,27 @@ object HttpUnaryServerRouter {
       encodeErrorsBeforeMiddleware: Boolean
   )(implicit F: MonadThrowLike[F])
       extends PartialFunction[RequestHead, Request => F[Response]] {
+
+    def this(
+        service: smithy4s.Service.Aux[Alg, Op],
+        impl: FunctorInterpreter[Op, F],
+        makeServerCodecs: UnaryServerCodecs.Make[F, Request, Response],
+        endpointMiddleware: Endpoint.Middleware[Request => F[Response]],
+        getMethod: RequestHead => HttpMethod,
+        getUri: RequestHead => HttpUri,
+        addDecodedPathParams: (Request, PathParams) => Request
+    )(implicit F: MonadThrowLike[F]) = {
+      this(
+        service,
+        impl,
+        makeServerCodecs,
+        endpointMiddleware,
+        getMethod,
+        getUri,
+        addDecodedPathParams,
+        encodeErrorsBeforeMiddleware = false
+      )
+    }
 
     @nowarn
     private final case class HttpEndpointHandler(

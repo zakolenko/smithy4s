@@ -28,6 +28,15 @@ object UnaryServerEndpoint {
       interpreter: FunctorInterpreter[Op, F],
       endpoint: Endpoint[Op, I, E, O, SI, SO],
       codecs: UnaryServerCodecs[F, Request, Response, I, E, O],
+      middleware: (Request => F[Response]) => (Request => F[Response])
+  )(implicit F: MonadThrowLike[F]): Request => F[Response] = {
+    apply(interpreter, endpoint, codecs, middleware, encodeErrorsBeforeMiddleware = false)
+  }
+
+  def apply[F[_], Op[_, _, _, _, _], Request, Response, I, E, O, SI, SO](
+      interpreter: FunctorInterpreter[Op, F],
+      endpoint: Endpoint[Op, I, E, O, SI, SO],
+      codecs: UnaryServerCodecs[F, Request, Response, I, E, O],
       middleware: (Request => F[Response]) => (Request => F[Response]),
       encodeErrorsBeforeMiddleware: Boolean = false
   )(implicit F: MonadThrowLike[F]): Request => F[Response] = {
