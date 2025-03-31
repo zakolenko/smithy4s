@@ -132,10 +132,24 @@ abstract class SimpleProtocolBuilder[P](
       impl: FunctorAlgebra[Alg, F],
       errorTransformation: PartialFunction[Throwable, F[Throwable]],
       middleware: ServerEndpointMiddleware[F],
-      encodeErrorsBeforeMiddleware: Boolean = false
+      encodeErrorsBeforeMiddleware: Boolean
   )(implicit
       F: Concurrent[F]
   ) {
+
+    def this(
+        service: smithy4s.Service[Alg],
+        impl: FunctorAlgebra[Alg, F],
+        errorTransformation: PartialFunction[Throwable, F[Throwable]],
+        middleware: ServerEndpointMiddleware[F]
+    )(implicit F: Concurrent[F]) =
+      this(
+        service,
+        impl,
+        errorTransformation,
+        middleware,
+        encodeErrorsBeforeMiddleware = false
+      )
 
     /**
       * Applies the error transformation to the errors that are not in the smithy spec (has no effect on errors from spec).
