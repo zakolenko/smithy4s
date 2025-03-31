@@ -157,7 +157,13 @@ abstract class SimpleProtocolBuilder[P](
     def mapErrors(
         fe: PartialFunction[Throwable, Throwable]
     ): RouterBuilder[Alg, F] =
-      new RouterBuilder(service, impl, fe andThen (e => F.pure(e)), middleware, encodeErrorsBeforeMiddleware)
+      new RouterBuilder(
+        service,
+        impl,
+        fe andThen (e => F.pure(e)),
+        middleware,
+        encodeErrorsBeforeMiddleware
+      )
 
     /**
       * Applies the error transformation to the errors that are not in the smithy spec (has no effect on errors from spec).
@@ -179,7 +185,13 @@ abstract class SimpleProtocolBuilder[P](
     def flatMapErrors(
         fe: PartialFunction[Throwable, F[Throwable]]
     ): RouterBuilder[Alg, F] =
-      new RouterBuilder(service, impl, fe, middleware, encodeErrorsBeforeMiddleware)
+      new RouterBuilder(
+        service,
+        impl,
+        fe,
+        middleware,
+        encodeErrorsBeforeMiddleware
+      )
 
     def middleware(
         mid: ServerEndpointMiddleware[F]
@@ -190,7 +202,13 @@ abstract class SimpleProtocolBuilder[P](
         mid: ServerEndpointMiddleware[F],
         encodeErrorsBeforeMiddleware: Boolean
     ): RouterBuilder[Alg, F] =
-      new RouterBuilder[Alg, F](service, impl, errorTransformation, mid, encodeErrorsBeforeMiddleware)
+      new RouterBuilder[Alg, F](
+        service,
+        impl,
+        errorTransformation,
+        mid,
+        encodeErrorsBeforeMiddleware
+      )
 
     def make: Either[UnsupportedProtocolError, HttpRoutes[F]] =
       checkProtocol(service, protocolTag)
