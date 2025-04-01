@@ -171,13 +171,7 @@ abstract class SimpleProtocolBuilder[P](
     def mapErrors(
         fe: PartialFunction[Throwable, Throwable]
     ): RouterBuilder[Alg, F] =
-      new RouterBuilder(
-        service,
-        impl,
-        fe andThen (e => F.pure(e)),
-        middleware,
-        encodeErrorsBeforeMiddleware
-      )
+      copy(errorTransformation = fe.andThen(F.pure(_)))
 
     /**
       * Applies the error transformation to the errors that are not in the smithy spec (has no effect on errors from spec).
@@ -199,24 +193,12 @@ abstract class SimpleProtocolBuilder[P](
     def flatMapErrors(
         fe: PartialFunction[Throwable, F[Throwable]]
     ): RouterBuilder[Alg, F] =
-      new RouterBuilder(
-        service,
-        impl,
-        fe,
-        middleware,
-        encodeErrorsBeforeMiddleware
-      )
+      copy(errorTransformation = fe)
 
     def middleware(
         mid: ServerEndpointMiddleware[F]
     ): RouterBuilder[Alg, F] =
-      new RouterBuilder[Alg, F](
-        service,
-        impl,
-        errorTransformation,
-        mid,
-        encodeErrorsBeforeMiddleware
-      )
+      copy(middleware = mid)
 
     /**
       * Configures whether errors that are in the smithy spec should be encoded into the HTTP response
@@ -229,13 +211,7 @@ abstract class SimpleProtocolBuilder[P](
       *   middleware unencoded.
       */
     def encodeErrorsBeforeMiddleware(value: Boolean): RouterBuilder[Alg, F] =
-      new RouterBuilder[Alg, F](
-        service,
-        impl,
-        errorTransformation,
-        middleware,
-        value
-      )
+      copy(encodeErrorsBeforeMiddleware = value)
 
     def make: Either[UnsupportedProtocolError, HttpRoutes[F]] =
       checkProtocol(service, protocolTag)
@@ -266,6 +242,21 @@ abstract class SimpleProtocolBuilder[P](
     def resource: Resource[F, HttpRoutes[F]] =
       make.leftWiden[Throwable].liftTo[Resource[F, *]]
 
+    private def copy(
+        service: smithy4s.Service[Alg] = service,
+        impl: FunctorAlgebra[Alg, F] = impl,
+        errorTransformation: PartialFunction[Throwable, F[Throwable]] =
+          errorTransformation,
+        middleware: ServerEndpointMiddleware[F] = middleware,
+        encodeErrorsBeforeMiddleware: Boolean = encodeErrorsBeforeMiddleware
+    ): RouterBuilder[Alg, F] =
+      new RouterBuilder(
+        service,
+        impl,
+        errorTransformation,
+        middleware,
+        encodeErrorsBeforeMiddleware
+      )
   }
 
 }
