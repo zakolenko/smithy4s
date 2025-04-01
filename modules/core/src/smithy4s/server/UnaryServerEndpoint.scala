@@ -38,7 +38,7 @@ object UnaryServerEndpoint {
       endpoint: Endpoint[Op, I, E, O, SI, SO],
       codecs: UnaryServerCodecs[F, Request, Response, I, E, O],
       middleware: (Request => F[Response]) => (Request => F[Response]),
-      encodeErrorsBeforeMiddleware: Boolean = false
+      encodeErrorsBeforeMiddleware: Boolean
   )(implicit F: MonadThrowLike[F]): Request => F[Response] = {
     def errorResponse(throwable: Throwable): F[Response] = throwable match {
       case endpoint.Error((_, e)) =>

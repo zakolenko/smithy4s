@@ -210,18 +210,23 @@ abstract class SimpleProtocolBuilder[P](
     def middleware(
         mid: ServerEndpointMiddleware[F]
     ): RouterBuilder[Alg, F] =
-      middleware(mid, encodeErrorsBeforeMiddleware = false)
+      new RouterBuilder[Alg, F](
+        service,
+        impl,
+        errorTransformation,
+        mid,
+        encodeErrorsBeforeMiddleware = false
+      )
 
-    def middleware(
-        mid: ServerEndpointMiddleware[F],
-        encodeErrorsBeforeMiddleware: Boolean
+    def middlewareWithEncodedErrors(
+        mid: ServerEndpointMiddleware[F]
     ): RouterBuilder[Alg, F] =
       new RouterBuilder[Alg, F](
         service,
         impl,
         errorTransformation,
         mid,
-        encodeErrorsBeforeMiddleware
+        encodeErrorsBeforeMiddleware = true
       )
 
     def make: Either[UnsupportedProtocolError, HttpRoutes[F]] =
@@ -233,18 +238,18 @@ abstract class SimpleProtocolBuilder[P](
             ServerEndpointMiddleware.flatMapErrors(errorTransformation)
           val finalMiddleware =
             errorHandler.andThen(middleware).andThen(errorHandler)
-          val router = HttpUnaryServerRouter.v2(service)(
-            impl,
-            simpleProtocolCodecs.makeServerCodecs[F],
-            finalMiddleware.biject(_.run)(HttpApp(_)),
-            getMethod =
-              (request: Request[F]) => toSmithy4sHttpMethod(request.method),
-            getUri =
-              (request: Request[F]) => toSmithy4sHttpUri(request.uri, None),
-            addDecodedPathParams = (request: Request[F], pathParams) =>
-              request.withAttribute(pathParamsKey, pathParams),
-            encodeErrorsBeforeMiddleware = encodeErrorsBeforeMiddleware
-          )
+          val router =
+            HttpUnaryServerRouter(service, encodeErrorsBeforeMiddleware)(
+              impl,
+              simpleProtocolCodecs.makeServerCodecs[F],
+              finalMiddleware.biject(_.run)(HttpApp(_)),
+              getMethod =
+                (request: Request[F]) => toSmithy4sHttpMethod(request.method),
+              getUri =
+                (request: Request[F]) => toSmithy4sHttpUri(request.uri, None),
+              addDecodedPathParams = (request: Request[F], pathParams) =>
+                request.withAttribute(pathParamsKey, pathParams)
+            )
           HttpRoutes(
             router.andThen(OptionT.fromOption(_).flatMap(OptionT.liftF(_)))
           )

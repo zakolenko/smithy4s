@@ -113,7 +113,7 @@ object ServerEndpointMiddlewareSpec extends SimpleIOSuite {
       )
   }
 
-  test("server - middleware receives an http app with encoded errors") {
+  test("server - middleware receives an http app with encoded specific error") {
     val middleware = new ServerEndpointMiddleware.Simple[IO]() {
       def prepareWithHints(
           serviceHints: Hints,
@@ -129,23 +129,23 @@ object ServerEndpointMiddlewareSpec extends SimpleIOSuite {
     }
 
     SimpleRestJsonBuilder
-      .routes(new HelloWorldService[IO] {
-        def hello(name: String, town: Option[String]): IO[Greeting] =
-          IO.raiseError(
-            SpecificServerError(
-              Some("to be encoded before middleware is applied")
+      .routes(
+        new HelloWorldService[IO] {
+          def hello(name: String, town: Option[String]): IO[Greeting] =
+            IO.raiseError(
+              SpecificServerError(
+                Some("to be encoded before middleware is applied")
+              )
             )
-          )
-      })
-      .middleware(middleware, encodeErrorsBeforeMiddleware = true)
+        }
+      )
+      .middlewareWithEncodedErrors(middleware)
       .make
       .toOption
       .get
       .apply(Request[IO](Method.POST, Uri.unsafeFromString("/bob")))
       .flatMap(res => OptionT.pure(expect.eql(res.status.code, 599)))
-      .getOrElse(
-        failure("unable to run request")
-      )
+      .getOrElse(failure("unable to run request"))
   }
 
   test("server - middleware is applied") {

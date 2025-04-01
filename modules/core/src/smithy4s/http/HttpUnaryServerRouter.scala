@@ -39,28 +39,26 @@ object HttpUnaryServerRouter {
       getUri: Request => HttpUri,
       addDecodedPathParams: (Request, PathParams) => Request
   )(implicit F: MonadThrowLike[F]): Request => Option[F[Response]] = {
-    new KleisliRouter[Alg, service.Operation, F, Request, Response](
-      service,
-      service.toPolyFunction[smithy4s.kinds.Kind1[F]#toKind5](impl),
+    apply(service, encodeErrorsBeforeMiddleware = false)(
+      impl,
       makeServerCodecs,
       endpointMiddleware,
       getMethod,
       getUri,
-      addDecodedPathParams,
-      encodeErrorsBeforeMiddleware = false
+      addDecodedPathParams
     )
   }
 
-  def v2[Alg[_[_, _, _, _, _]], F[_], Request, Response](
-      service: smithy4s.Service[Alg]
+  def apply[Alg[_[_, _, _, _, _]], F[_], Request, Response](
+      service: smithy4s.Service[Alg],
+      encodeErrorsBeforeMiddleware: Boolean
   )(
       impl: service.Impl[F],
       makeServerCodecs: UnaryServerCodecs.Make[F, Request, Response],
       endpointMiddleware: Endpoint.Middleware[Request => F[Response]],
       getMethod: Request => HttpMethod,
       getUri: Request => HttpUri,
-      addDecodedPathParams: (Request, PathParams) => Request,
-      encodeErrorsBeforeMiddleware: Boolean
+      addDecodedPathParams: (Request, PathParams) => Request
   )(implicit F: MonadThrowLike[F]): Request => Option[F[Response]] = {
     new KleisliRouter[Alg, service.Operation, F, Request, Response](
       service,
