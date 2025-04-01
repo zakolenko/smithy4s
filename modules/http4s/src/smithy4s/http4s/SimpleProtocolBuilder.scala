@@ -215,18 +215,16 @@ abstract class SimpleProtocolBuilder[P](
         impl,
         errorTransformation,
         mid,
-        encodeErrorsBeforeMiddleware = false
+        encodeErrorsBeforeMiddleware
       )
 
-    def middlewareWithEncodedErrors(
-        mid: ServerEndpointMiddleware[F]
-    ): RouterBuilder[Alg, F] =
+    def encodeErrorsBeforeMiddleware(value: Boolean): RouterBuilder[Alg, F] =
       new RouterBuilder[Alg, F](
         service,
         impl,
         errorTransformation,
-        mid,
-        encodeErrorsBeforeMiddleware = true
+        middleware,
+        value
       )
 
     def make: Either[UnsupportedProtocolError, HttpRoutes[F]] =

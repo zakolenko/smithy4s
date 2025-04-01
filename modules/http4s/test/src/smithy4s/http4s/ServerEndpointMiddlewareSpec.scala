@@ -139,7 +139,8 @@ object ServerEndpointMiddlewareSpec extends SimpleIOSuite {
             )
         }
       )
-      .middlewareWithEncodedErrors(middleware)
+      .encodeErrorsBeforeMiddleware(true)
+      .middleware(middleware)
       .make
       .toOption
       .get
