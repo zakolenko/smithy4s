@@ -218,6 +218,16 @@ abstract class SimpleProtocolBuilder[P](
         encodeErrorsBeforeMiddleware
       )
 
+    /**
+      * Configures whether errors that are in the smithy spec should be encoded into the HTTP response
+      * before the middleware is applied
+      *
+      * - If `true`, errors defined in the smithy spec will be encoded into the
+      *   response before middleware is applied. Non-Smithy errors will remain unencoded
+      *   and will be visible from [[middleware]].
+      * - If `false`, all errors (both smithy and non-smithy) will pass through the
+      *   middleware unencoded.
+      */
     def encodeErrorsBeforeMiddleware(value: Boolean): RouterBuilder[Alg, F] =
       new RouterBuilder[Alg, F](
         service,
