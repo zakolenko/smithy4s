@@ -257,6 +257,12 @@ lazy val core = projectMatrix
       ),
       ProblemFilters.exclude[IncompatibleResultTypeProblem](
         "smithy.api.TraitDiffRule.apply$default$2"
+      ),
+      ProblemFilters.exclude[DirectMissingMethodProblem](
+        "smithy4s.http.HttpUnaryServerRouter#KleisliRouter.this"
+      ),
+      ProblemFilters.exclude[DirectMissingMethodProblem](
+        "smithy4s.http.HttpUnaryServerRouter#PartialFunctionRouter.this"
       )
     )
   )

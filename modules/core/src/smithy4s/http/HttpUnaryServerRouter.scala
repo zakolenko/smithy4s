@@ -133,27 +133,6 @@ object HttpUnaryServerRouter {
   )(implicit F: MonadThrowLike[F])
       extends (Request => Option[F[Response]]) {
 
-    def this(
-        service: smithy4s.Service.Aux[Alg, Op],
-        impl: FunctorInterpreter[Op, F],
-        makeServerCodecs: UnaryServerCodecs.Make[F, Request, Response],
-        endpointMiddleware: Endpoint.Middleware[Request => F[Response]],
-        getMethod: Request => HttpMethod,
-        getUri: Request => HttpUri,
-        addDecodedPathParams: (Request, PathParams) => Request
-    )(implicit F: MonadThrowLike[F]) = {
-      this(
-        service,
-        impl,
-        makeServerCodecs,
-        endpointMiddleware,
-        getMethod,
-        getUri,
-        addDecodedPathParams,
-        encodeErrorsBeforeMiddleware = false
-      )
-    }
-
     @nowarn
     private final case class HttpEndpointHandler(
         httpEndpoint: HttpEndpoint[_],
@@ -218,27 +197,6 @@ object HttpUnaryServerRouter {
       encodeErrorsBeforeMiddleware: Boolean
   )(implicit F: MonadThrowLike[F])
       extends PartialFunction[RequestHead, Request => F[Response]] {
-
-    def this(
-        service: smithy4s.Service.Aux[Alg, Op],
-        impl: FunctorInterpreter[Op, F],
-        makeServerCodecs: UnaryServerCodecs.Make[F, Request, Response],
-        endpointMiddleware: Endpoint.Middleware[Request => F[Response]],
-        getMethod: RequestHead => HttpMethod,
-        getUri: RequestHead => HttpUri,
-        addDecodedPathParams: (Request, PathParams) => Request
-    )(implicit F: MonadThrowLike[F]) = {
-      this(
-        service,
-        impl,
-        makeServerCodecs,
-        endpointMiddleware,
-        getMethod,
-        getUri,
-        addDecodedPathParams,
-        encodeErrorsBeforeMiddleware = false
-      )
-    }
 
     @nowarn
     private final case class HttpEndpointHandler(
