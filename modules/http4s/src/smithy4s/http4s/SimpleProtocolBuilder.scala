@@ -60,7 +60,8 @@ abstract class SimpleProtocolBuilder[P](
       service,
       impl,
       PartialFunction.empty,
-      Endpoint.Middleware.noop
+      Endpoint.Middleware.noop,
+      encodeErrorsBeforeMiddleware = false
     )
   }
 
@@ -78,7 +79,8 @@ abstract class SimpleProtocolBuilder[P](
         service,
         impl,
         PartialFunction.empty,
-        Endpoint.Middleware.noop
+        Endpoint.Middleware.noop,
+        encodeErrorsBeforeMiddleware = false
       )
 
   }
@@ -137,20 +139,6 @@ abstract class SimpleProtocolBuilder[P](
       F: Concurrent[F]
   ) {
 
-    def this(
-        service: smithy4s.Service[Alg],
-        impl: FunctorAlgebra[Alg, F],
-        errorTransformation: PartialFunction[Throwable, F[Throwable]],
-        middleware: ServerEndpointMiddleware[F]
-    )(implicit F: Concurrent[F]) =
-      this(
-        service,
-        impl,
-        errorTransformation,
-        middleware,
-        encodeErrorsBeforeMiddleware = false
-      )
-
     /**
       * Applies the error transformation to the errors that are not in the smithy spec (has no effect on errors from spec).
       * Transformed errors raised in endpoint implementation will be observable from [[middleware]].
@@ -202,13 +190,15 @@ abstract class SimpleProtocolBuilder[P](
 
     /**
       * Configures whether errors that are in the smithy spec should be encoded into the HTTP response
-      * before the middleware is applied
+      * before the middleware is applied.
       *
       * - If `true`, errors defined in the smithy spec will be encoded into the
       *   response before middleware is applied. Non-Smithy errors will remain unencoded
       *   and will be visible from [[middleware]].
       * - If `false`, all errors (both smithy and non-smithy) will pass through the
       *   middleware unencoded.
+      *
+      * @note default is `false`
       */
     def encodeErrorsBeforeMiddleware(value: Boolean): RouterBuilder[Alg, F] =
       copy(encodeErrorsBeforeMiddleware = value)

@@ -2,6 +2,7 @@ import com.typesafe.tools.mima.core.ProblemFilters
 import com.typesafe.tools.mima.core.MissingClassProblem
 import com.typesafe.tools.mima.core.IncompatibleResultTypeProblem
 import com.typesafe.tools.mima.core.IncompatibleMethTypeProblem
+import com.typesafe.tools.mima.core.DirectMissingMethodProblem
 import _root_.java.util.stream.Collectors
 import java.nio.file.Files
 import sbt.internal.IvyConsole
@@ -812,7 +813,12 @@ lazy val http4s = projectMatrix
           Map("MODEL_DUMP" -> file.getAbsolutePath)
         }
         .getOrElse(Map.empty)
-    }
+    },
+    mimaBinaryIssueFilters ++= Seq(
+      ProblemFilters.exclude[DirectMissingMethodProblem](
+        "smithy4s.http4s.SimpleProtocolBuilder#RouterBuilder.this"
+      )
+    )
   )
   .http4sPlatform(allJvmScalaVersions, jvmDimSettings)
 
